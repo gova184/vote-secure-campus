@@ -1,0 +1,243 @@
+
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import Layout from "@/components/Layout";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Shield, Vote } from "lucide-react";
+import CandidateCard from "@/components/CandidateCard";
+import BiometricVerification from "@/components/BiometricVerification";
+import { useAuth } from "@/context/AuthContext";
+import { useBlockchain } from "@/context/BlockchainContext";
+import { toast } from "sonner";
+
+const Voting = () => {
+  const [selectedCandidate, setSelectedCandidate] = useState<string | null>(null);
+  const [showBiometricModal, setShowBiometricModal] = useState<boolean>(false);
+  const [votingStep, setVotingStep] = useState<"select" | "verify" | "confirm">("select");
+  
+  const { currentUser, isAuthenticated, verifyBiometric, setHasVoted } = useAuth();
+  const { candidates, castVote, isLoading } = useBlockchain();
+  const navigate = useNavigate();
+  
+  // Check if user is authenticated and hasn't voted
+  useEffect(() => {
+    if (!isAuthenticated) {
+      toast.error("You must be logged in to vote");
+      navigate("/login");
+      return;
+    }
+    
+    if (currentUser?.hasVoted) {
+      toast.error("You have already cast your vote");
+      navigate("/results");
+    }
+  }, [isAuthenticated, currentUser, navigate]);
+
+  const handleBiometricSuccess = () => {
+    setShowBiometricModal(false);
+    setVotingStep("confirm");
+    toast.success("Biometric verification successful!");
+  };
+
+  const handleVoteSelection = (candidateId: string) => {
+    setSelectedCandidate(candidateId);
+  };
+
+  const handleProceedToVerification = () => {
+    if (!selectedCandidate) {
+      toast.error("Please select a candidate");
+      return;
+    }
+    
+    setVotingStep("verify");
+    setShowBiometricModal(true);
+  };
+
+  const handleCastVote = async () => {
+    if (!selectedCandidate || !currentUser) return;
+    
+    const success = await castVote(selectedCandidate, currentUser.id);
+    
+    if (success) {
+      setHasVoted();
+      toast.success("Your vote has been recorded on the blockchain!");
+      navigate("/results");
+    }
+  };
+
+  return (
+    <Layout>
+      <div className="container mx-auto px-4 py-12">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex justify-between items-center mb-8">
+            <h1 className="text-3xl font-bold text-vote-dark">Election Ballot</h1>
+            
+            <div className="flex items-center space-x-2 bg-vote-light px-3 py-1 rounded-full text-sm">
+              <Shield className="h-4 w-4 text-vote-primary" />
+              <span>Secured by Blockchain</span>
+            </div>
+          </div>
+          
+          {/* Progress Steps */}
+          <div className="flex items-center justify-between mb-8 px-4">
+            <div className="flex flex-col items-center">
+              <div className={`h-8 w-8 rounded-full flex items-center justify-center ${votingStep === "select" ? "bg-vote-primary text-white" : "bg-vote-primary text-white"}`}>
+                1
+              </div>
+              <span className="text-xs mt-1">Select</span>
+            </div>
+            
+            <div className={`h-1 flex-grow ${votingStep === "select" ? "bg-gray-200" : "bg-vote-primary"}`} />
+            
+            <div className="flex flex-col items-center">
+              <div className={`h-8 w-8 rounded-full flex items-center justify-center ${votingStep === "verify" || votingStep === "confirm" ? "bg-vote-primary text-white" : "bg-gray-200 text-gray-500"}`}>
+                2
+              </div>
+              <span className="text-xs mt-1">Verify</span>
+            </div>
+            
+            <div className={`h-1 flex-grow ${votingStep === "confirm" ? "bg-vote-primary" : "bg-gray-200"}`} />
+            
+            <div className="flex flex-col items-center">
+              <div className={`h-8 w-8 rounded-full flex items-center justify-center ${votingStep === "confirm" ? "bg-vote-primary text-white" : "bg-gray-200 text-gray-500"}`}>
+                3
+              </div>
+              <span className="text-xs mt-1">Submit</span>
+            </div>
+          </div>
+          
+          {/* Voting Interface */}
+          {votingStep === "select" && (
+            <div>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Select Your Preferred Candidate</CardTitle>
+                  <CardDescription>
+                    Choose one candidate for the position of Student Body President
+                  </CardDescription>
+                </CardHeader>
+                
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {candidates
+                      .filter(candidate => candidate.position === "Student Body President")
+                      .map((candidate) => (
+                        <CandidateCard
+                          key={candidate.id}
+                          id={candidate.id}
+                          name={candidate.name}
+                          party={candidate.party}
+                          position={candidate.position}
+                          image={candidate.image}
+                          onVote={handleVoteSelection}
+                          isSelected={selectedCandidate === candidate.id}
+                        />
+                      ))}
+                  </div>
+                  
+                  <div className="mt-8 text-center">
+                    <Button
+                      onClick={handleProceedToVerification}
+                      disabled={!selectedCandidate}
+                      className="bg-vote-primary hover:bg-vote-secondary text-white"
+                      size="lg"
+                    >
+                      <Vote className="mr-2 h-5 w-5" />
+                      Proceed to Verification
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+          
+          {votingStep === "verify" && !showBiometricModal && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Biometric Verification Required</CardTitle>
+                <CardDescription>
+                  Please complete the biometric verification process
+                </CardDescription>
+              </CardHeader>
+              
+              <CardContent className="text-center py-12">
+                <Button
+                  onClick={() => setShowBiometricModal(true)}
+                  className="bg-vote-primary hover:bg-vote-secondary text-white"
+                  size="lg"
+                >
+                  Start Biometric Verification
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+          
+          {votingStep === "confirm" && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Confirm Your Vote</CardTitle>
+                <CardDescription>
+                  Please review your selection before submitting your vote
+                </CardDescription>
+              </CardHeader>
+              
+              <CardContent>
+                <div className="mb-6">
+                  <Alert className="bg-vote-light border-vote-primary">
+                    <AlertTitle className="text-vote-primary">Your vote is about to be recorded on the blockchain</AlertTitle>
+                    <AlertDescription>
+                      Once submitted, your vote cannot be changed. The blockchain ensures your vote is secure and immutable.
+                    </AlertDescription>
+                  </Alert>
+                </div>
+                
+                <div className="max-w-sm mx-auto mb-8">
+                  {selectedCandidate && (
+                    <CandidateCard
+                      {...candidates.find(c => c.id === selectedCandidate)!}
+                      isSelected={true}
+                    />
+                  )}
+                </div>
+                
+                <div className="flex flex-col sm:flex-row justify-center gap-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => setVotingStep("select")}
+                    className="border-vote-primary text-vote-primary hover:bg-vote-primary hover:text-white"
+                  >
+                    Change Selection
+                  </Button>
+                  
+                  <Button
+                    onClick={handleCastVote}
+                    disabled={isLoading}
+                    className="bg-vote-primary hover:bg-vote-secondary text-white"
+                  >
+                    {isLoading ? "Recording Vote..." : "Confirm and Cast Vote"}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </div>
+      
+      {/* Biometric Modal */}
+      {showBiometricModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="w-full max-w-md">
+            <BiometricVerification
+              onVerified={handleBiometricSuccess}
+              onCancel={() => setShowBiometricModal(false)}
+            />
+          </div>
+        </div>
+      )}
+    </Layout>
+  );
+};
+
+export default Voting;
