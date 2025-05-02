@@ -22,7 +22,7 @@ const Index = () => {
             Powered by blockchain technology and biometric authentication.
           </p>
           
-          <div className="flex flex-col sm:flex-row justify-center gap-4 mb-12">
+          <div className="flex flex-col sm:flex-row justify-center gap-4 mb-6">
             {isAuthenticated ? (
               <>
                 {!currentUser?.hasVoted ? (
@@ -64,6 +64,19 @@ const Index = () => {
               </>
             )}
           </div>
+          
+          {isAuthenticated && (
+            <div className="mb-12">
+              <Button 
+                size="lg" 
+                variant="outline" 
+                onClick={() => navigate("/create-vote")}
+                className="border-vote-primary text-vote-primary hover:bg-vote-primary hover:text-white"
+              >
+                Create Your Own Election
+              </Button>
+            </div>
+          )}
           
           <div className="relative w-full max-w-4xl mx-auto">
             <div className="bg-white rounded-xl shadow-xl overflow-hidden border border-gray-100">
@@ -142,13 +155,25 @@ const Index = () => {
           <p className="text-lg text-gray-300 max-w-2xl mx-auto mb-8">
             Join the digital voting revolution and experience the most secure, transparent, and efficient election process.
           </p>
-          <Button 
-            size="lg" 
-            onClick={() => navigate(isAuthenticated ? "/voting" : "/register")}
-            className="bg-vote-primary hover:bg-vote-secondary text-white"
-          >
-            {isAuthenticated ? "Go to Voting" : "Get Started Now"}
-          </Button>
+          <div className="flex flex-wrap justify-center gap-4">
+            <Button 
+              size="lg" 
+              onClick={() => navigate(isAuthenticated ? "/voting" : "/register")}
+              className="bg-vote-primary hover:bg-vote-secondary text-white"
+            >
+              {isAuthenticated ? "Go to Voting" : "Get Started Now"}
+            </Button>
+            {isAuthenticated && (
+              <Button 
+                size="lg" 
+                variant="outline" 
+                onClick={() => navigate("/create-vote")}
+                className="border-white text-white hover:bg-white hover:text-vote-dark"
+              >
+                Create Election
+              </Button>
+            )}
+          </div>
         </div>
       </section>
     </Layout>

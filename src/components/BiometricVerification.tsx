@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Fingerprint } from "lucide-react";
@@ -13,26 +13,102 @@ interface BiometricVerificationProps {
 const BiometricVerification = ({ onVerified, onCancel }: BiometricVerificationProps) => {
   const [isScanning, setIsScanning] = useState<boolean>(false);
   const [progress, setProgress] = useState<number>(0);
+  const [biometricAvailable, setBiometricAvailable] = useState<boolean | null>(null);
   
-  const startScan = () => {
+  // Check if biometric authentication is available
+  useEffect(() => {
+    const checkBiometricAvailability = async () => {
+      try {
+        if (window.PublicKeyCredential && 
+            PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable) {
+          const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+          setBiometricAvailable(available);
+          
+          if (!available) {
+            console.log("Platform authenticator is not available on this device");
+          }
+        } else {
+          setBiometricAvailable(false);
+          console.log("WebAuthn is not supported in this browser");
+        }
+      } catch (error) {
+        console.error("Error checking biometric availability:", error);
+        setBiometricAvailable(false);
+      }
+    };
+    
+    checkBiometricAvailability();
+  }, []);
+
+  const startScan = async () => {
     setIsScanning(true);
     setProgress(0);
     
-    // Simulate fingerprint scanning with progress
-    const interval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setTimeout(() => {
-            setIsScanning(false);
-            onVerified();
-            toast.success("Fingerprint verified successfully!");
-          }, 500);
-          return 100;
-        }
-        return prev + 10;
-      });
-    }, 300);
+    // If real biometric authentication is available, use it
+    if (biometricAvailable) {
+      try {
+        // Set up progress animation
+        const progressInterval = setInterval(() => {
+          setProgress(prev => {
+            if (prev >= 60) {
+              clearInterval(progressInterval);
+              return 60;
+            }
+            return prev + 10;
+          });
+        }, 300);
+        
+        // Create a challenge
+        const challenge = new Uint8Array(32);
+        window.crypto.getRandomValues(challenge);
+        
+        // Create the credential options
+        const publicKeyCredentialRequestOptions = {
+          challenge,
+          timeout: 60000,
+          userVerification: 'required' as UserVerificationRequirement,
+          rpId: window.location.hostname
+        };
+        
+        // Request the credential
+        const assertion = await navigator.credentials.get({
+          publicKey: publicKeyCredentialRequestOptions
+        });
+        
+        // Clear the progress interval
+        clearInterval(progressInterval);
+        
+        // If we got here, the authentication was successful
+        setProgress(100);
+        setTimeout(() => {
+          setIsScanning(false);
+          onVerified();
+          toast.success("Biometric verification successful!");
+        }, 500);
+        
+      } catch (error) {
+        console.error("Biometric authentication error:", error);
+        toast.error("Biometric verification failed");
+        setIsScanning(false);
+        setProgress(0);
+      }
+    } else {
+      // Fall back to the simulation for devices without biometric hardware
+      const interval = setInterval(() => {
+        setProgress((prev) => {
+          if (prev >= 100) {
+            clearInterval(interval);
+            setTimeout(() => {
+              setIsScanning(false);
+              onVerified();
+              toast.success("Fingerprint verified successfully!");
+            }, 500);
+            return 100;
+          }
+          return prev + 10;
+        });
+      }, 300);
+    }
   };
 
   return (
@@ -40,7 +116,9 @@ const BiometricVerification = ({ onVerified, onCancel }: BiometricVerificationPr
       <CardHeader>
         <CardTitle className="text-center text-vote-primary">Biometric Verification</CardTitle>
         <CardDescription className="text-center">
-          Place your finger on the sensor to verify your identity
+          {biometricAvailable === false 
+            ? "Your device doesn't support biometric verification. This is a simulation."
+            : "Place your finger on the sensor to verify your identity"}
         </CardDescription>
       </CardHeader>
       

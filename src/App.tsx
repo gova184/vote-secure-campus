@@ -11,6 +11,7 @@ import Voting from "./pages/Voting";
 import Results from "./pages/Results";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
+import CreateVote from "./pages/CreateVote";
 import { BlockchainProvider } from "./context/BlockchainContext";
 import { AuthProvider } from "./context/AuthContext";
 
@@ -29,8 +30,11 @@ const App = () => (
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/voting" element={<Voting />} />
+              <Route path="/voting/:electionId" element={<Voting />} />
               <Route path="/results" element={<Results />} />
+              <Route path="/results/:electionId" element={<Results />} />
               <Route path="/admin" element={<Admin />} />
+              <Route path="/create-vote" element={<CreateVote />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

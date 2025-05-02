@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,10 +18,27 @@ const Voting = () => {
   const [votingStep, setVotingStep] = useState<"select" | "verify" | "confirm">("select");
   
   const { currentUser, isAuthenticated, verifyBiometric, setHasVoted } = useAuth();
-  const { candidates, castVote, isLoading } = useBlockchain();
+  const { castVote, isLoading, getElection, setCurrentElection } = useBlockchain();
   const navigate = useNavigate();
+  const { electionId } = useParams<{ electionId?: string }>();
   
-  // Check if user is authenticated and hasn't voted
+  // Load election if ID is provided
+  useEffect(() => {
+    if (electionId) {
+      const election = getElection(electionId);
+      if (election) {
+        setCurrentElection(electionId);
+      } else {
+        toast.error("Election not found");
+        navigate("/");
+      }
+    }
+  }, [electionId, getElection, setCurrentElection, navigate]);
+  
+  // Get current election
+  const election = electionId ? getElection(electionId) : undefined;
+  
+  // Check if user is authenticated
   useEffect(() => {
     if (!isAuthenticated) {
       toast.error("You must be logged in to vote");
@@ -29,11 +46,11 @@ const Voting = () => {
       return;
     }
     
-    if (currentUser?.hasVoted) {
-      toast.error("You have already cast your vote");
+    if (!electionId && currentUser?.hasVoted) {
+      toast.error("You have already cast your vote in the default election");
       navigate("/results");
     }
-  }, [isAuthenticated, currentUser, navigate]);
+  }, [isAuthenticated, currentUser, navigate, electionId]);
 
   const handleBiometricSuccess = () => {
     setShowBiometricModal(false);
@@ -58,12 +75,15 @@ const Voting = () => {
   const handleCastVote = async () => {
     if (!selectedCandidate || !currentUser) return;
     
-    const success = await castVote(selectedCandidate, currentUser.id);
+    const success = await castVote(selectedCandidate, currentUser.id, electionId);
     
     if (success) {
-      setHasVoted();
+      if (!electionId) {
+        // Only mark the user as voted if this is the main election
+        setHasVoted();
+      }
       toast.success("Your vote has been recorded on the blockchain!");
-      navigate("/results");
+      navigate(electionId ? `/results/${electionId}` : "/results");
     }
   };
 
@@ -72,7 +92,9 @@ const Voting = () => {
       <div className="container mx-auto px-4 py-12">
         <div className="max-w-4xl mx-auto">
           <div className="flex justify-between items-center mb-8">
-            <h1 className="text-3xl font-bold text-vote-dark">Election Ballot</h1>
+            <h1 className="text-3xl font-bold text-vote-dark">
+              {election ? election.title : "Election Ballot"}
+            </h1>
             
             <div className="flex items-center space-x-2 bg-vote-light px-3 py-1 rounded-full text-sm">
               <Shield className="h-4 w-4 text-vote-primary" />
@@ -115,14 +137,13 @@ const Voting = () => {
                 <CardHeader>
                   <CardTitle>Select Your Preferred Candidate</CardTitle>
                   <CardDescription>
-                    Choose one candidate for the position of Student Body President
+                    Choose one candidate for the position of {election?.position || "Student Body President"}
                   </CardDescription>
                 </CardHeader>
                 
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {candidates
-                      .filter(candidate => candidate.position === "Student Body President")
+                    {(election?.candidates || [])
                       .map((candidate) => (
                         <CandidateCard
                           key={candidate.id}
@@ -194,9 +215,9 @@ const Voting = () => {
                 </div>
                 
                 <div className="max-w-sm mx-auto mb-8">
-                  {selectedCandidate && (
+                  {selectedCandidate && election?.candidates && (
                     <CandidateCard
-                      {...candidates.find(c => c.id === selectedCandidate)!}
+                      {...election.candidates.find(c => c.id === selectedCandidate)!}
                       isSelected={true}
                     />
                   )}
