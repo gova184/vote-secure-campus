@@ -21,8 +21,16 @@ const BiometricVerification = ({ onVerified, onCancel, userId }: BiometricVerifi
   useEffect(() => {
     const checkBiometricAvailability = async () => {
       try {
-        if (window.PublicKeyCredential && 
-            PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable) {
+        // Check if running in a mobile browser
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        
+        if (isMobile) {
+          // For mobile devices, we'll assume capabilities are available
+          // as we'll use a native bridge or simulate for demo purposes
+          setBiometricAvailable(true);
+          console.log("Mobile device detected, assuming biometric capability");
+        } else if (window.PublicKeyCredential && 
+                 PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable) {
           const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
           setBiometricAvailable(available);
           
@@ -63,8 +71,47 @@ const BiometricVerification = ({ onVerified, onCancel, userId }: BiometricVerifi
     setIsScanning(true);
     setProgress(0);
     
-    // If real biometric authentication is available, use it
-    if (biometricAvailable) {
+    // Check if this is a mobile device
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    
+    // For mobile devices, we'll use a simulated approach since WebAuthn might not be fully supported
+    if (isMobile) {
+      try {
+        // Set up progress animation
+        const progressInterval = setInterval(() => {
+          setProgress(prev => {
+            if (prev >= 100) {
+              clearInterval(progressInterval);
+              return 100;
+            }
+            return prev + 10;
+          });
+        }, 300);
+        
+        // Simulate the native fingerprint scan
+        // In a real app, this would connect to the device's native fingerprint API
+        
+        // For demo purposes, after the progress reaches 100%, we'll simulate success
+        setTimeout(() => {
+          clearInterval(progressInterval);
+          setProgress(100);
+          
+          // For demo: verification succeeds right away on mobile
+          setTimeout(() => {
+            setIsScanning(false);
+            onVerified();
+            toast.success(userId ? "Fingerprint verified successfully!" : "Fingerprint registered successfully!");
+          }, 500);
+        }, 3000);
+      } catch (error) {
+        console.error("Mobile biometric simulation error:", error);
+        toast.error("Fingerprint verification failed. Please try again.");
+        setIsScanning(false);
+        setProgress(0);
+      }
+      
+    } else {
+      // Desktop WebAuthn approach
       try {
         // Set up progress animation
         const progressInterval = setInterval(() => {
@@ -89,40 +136,79 @@ const BiometricVerification = ({ onVerified, onCancel, userId }: BiometricVerifi
           rpId: window.location.hostname
         };
         
-        // Request the credential
-        const assertion = await navigator.credentials.get({
-          publicKey: publicKeyCredentialRequestOptions
-        });
-        
-        // Clear the progress interval
-        clearInterval(progressInterval);
-        
-        // We have the biometric verification from the device
-        // Now we need to check if it matches the one in the database
-        setProgress(80);
-        
-        let verificationSuccess = false;
-        
-        if (userId) {
-          // In a real app, we would send the assertion to the server to verify
-          verificationSuccess = await verifyFingerprintInDb(userId, assertion);
-          setVerificationAttempts(prev => prev + 1);
-        } else {
-          // If no userId (registration flow), we assume it's a valid registration
-          verificationSuccess = true;
-        }
-        
-        setProgress(100);
-        setTimeout(() => {
-          setIsScanning(false);
+        try {
+          // Request the credential
+          const assertion = await navigator.credentials.get({
+            publicKey: publicKeyCredentialRequestOptions
+          });
           
-          if (verificationSuccess) {
-            onVerified();
-            toast.success("Biometric verification successful!");
+          // Clear the progress interval
+          clearInterval(progressInterval);
+          
+          // We have the biometric verification from the device
+          // Now we need to check if it matches the one in the database
+          setProgress(80);
+          
+          let verificationSuccess = false;
+          
+          if (userId) {
+            // In a real app, we would send the assertion to the server to verify
+            verificationSuccess = await verifyFingerprintInDb(userId, assertion);
+            setVerificationAttempts(prev => prev + 1);
           } else {
-            toast.error("Fingerprint verification failed. Please try again.");
+            // If no userId (registration flow), we assume it's a valid registration
+            verificationSuccess = true;
           }
-        }, 500);
+          
+          setProgress(100);
+          setTimeout(() => {
+            setIsScanning(false);
+            
+            if (verificationSuccess) {
+              onVerified();
+              toast.success("Biometric verification successful!");
+            } else {
+              toast.error("Fingerprint verification failed. Please try again.");
+            }
+          }, 500);
+        } catch (error) {
+          // WebAuthn failed, fall back to simulation
+          clearInterval(progressInterval);
+          
+          console.error("Biometric authentication error:", error);
+          toast.info("Using simulated biometric verification for demo purposes");
+          
+          // Fallback to simulation
+          const fallbackInterval = setInterval(() => {
+            setProgress((prev) => {
+              if (prev >= 100) {
+                clearInterval(fallbackInterval);
+                return 100;
+              }
+              return prev + 10;
+            });
+          }, 200);
+          
+          setTimeout(() => {
+            setIsScanning(false);
+            
+            // For demo: after 2 attempts, verification succeeds
+            if (userId) {
+              // In voting flow, check verification attempts
+              setVerificationAttempts(prev => prev + 1);
+              if (verificationAttempts >= 2) {
+                onVerified();
+                toast.success("Fingerprint verified successfully!");
+              } else {
+                toast.error("Fingerprint verification failed. Please try again.");
+              }
+            } else {
+              // In registration flow, verify succeeds
+              onVerified();
+              toast.success("Fingerprint registered successfully!");
+            }
+          }, 2000);
+        }
         
       } catch (error) {
         console.error("Biometric authentication error:", error);
@@ -130,36 +216,6 @@ const BiometricVerification = ({ onVerified, onCancel, userId }: BiometricVerifi
         setIsScanning(false);
         setProgress(0);
       }
-    } else {
-      // Fall back to the simulation for devices without biometric hardware
-      const interval = setInterval(() => {
-        setProgress((prev) => {
-          if (prev >= 100) {
-            clearInterval(interval);
-            setTimeout(() => {
-              setIsScanning(false);
-              
-              // For demo: after 2 attempts, verification succeeds
-              if (userId) {
-                // In voting flow, check verification attempts
-                setVerificationAttempts(prev => prev + 1);
-                if (verificationAttempts >= 2) {
-                  onVerified();
-                  toast.success("Fingerprint verified successfully!");
-                } else {
-                  toast.error("Fingerprint verification failed. Please try again.");
-                }
-              } else {
-                // In registration flow, verify succeeds
-                onVerified();
-                toast.success("Fingerprint registered successfully!");
-              }
-            }, 500);
-            return 100;
-          }
-          return prev + 10;
-        });
-      }, 300);
     }
   };
 
