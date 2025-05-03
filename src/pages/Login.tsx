@@ -6,7 +6,7 @@ import Layout from "@/components/Layout";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Shield, Lock } from "lucide-react";
+import { Shield, Lock, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 
 const Login = () => {
@@ -31,20 +31,20 @@ const Login = () => {
 
   return (
     <Layout>
-      <div className="min-h-[80vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-vote-primary bg-opacity-10 flex items-center justify-center">
-              <Shield className="h-6 w-6 text-vote-primary" />
+      <div className="min-h-[80vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gray-50">
+        <Card className="w-full max-w-md border-0 shadow-xl overflow-hidden bg-white">
+          <CardHeader className="text-center bg-gradient-to-r from-vote-light to-white border-b pb-8">
+            <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-gradient-to-r from-vote-primary to-vote-secondary flex items-center justify-center">
+              <CheckCircle2 className="h-8 w-8 text-white" />
             </div>
-            <CardTitle className="text-2xl font-bold">Login to VoteSecure</CardTitle>
+            <CardTitle className="text-2xl font-bold">Login to VoteGuard</CardTitle>
             <CardDescription>
               Access your account to participate in the election
             </CardDescription>
           </CardHeader>
           
           <form onSubmit={handleSubmit}>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 pt-6">
               <div className="space-y-2">
                 <label htmlFor="email" className="text-sm font-medium text-gray-700">
                   Academic Email
@@ -84,10 +84,10 @@ const Login = () => {
               </div>
             </CardContent>
             
-            <CardFooter className="flex flex-col space-y-4">
+            <CardFooter className="flex flex-col space-y-4 border-t p-6 bg-gray-50">
               <Button
                 type="submit"
-                className="w-full bg-vote-primary hover:bg-vote-secondary text-white"
+                className="w-full bg-gradient-to-r from-vote-primary to-vote-secondary hover:opacity-90 text-white"
                 disabled={isLoading}
               >
                 {isLoading ? "Logging in..." : "Login"}

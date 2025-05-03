@@ -5,7 +5,7 @@ import Layout from "@/components/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Shield, Vote } from "lucide-react";
+import { Shield, Vote, Clock, AlertCircle } from "lucide-react";
 import CandidateCard from "@/components/CandidateCard";
 import BiometricVerification from "@/components/BiometricVerification";
 import { useAuth } from "@/context/AuthContext";
@@ -16,6 +16,7 @@ const Voting = () => {
   const [selectedCandidate, setSelectedCandidate] = useState<string | null>(null);
   const [showBiometricModal, setShowBiometricModal] = useState<boolean>(false);
   const [votingStep, setVotingStep] = useState<"select" | "verify" | "confirm">("select");
+  const [verificationFailed, setVerificationFailed] = useState<boolean>(false);
   
   const { currentUser, isAuthenticated, verifyBiometric, setHasVoted } = useAuth();
   const { castVote, isLoading, getElection, setCurrentElection } = useBlockchain();
@@ -38,6 +39,11 @@ const Voting = () => {
   // Get current election
   const election = electionId ? getElection(electionId) : undefined;
   
+  // Check if election has reached vote limit or time limit
+  const hasReachedVoteLimit = election?.voteLimit && election.candidates.reduce((sum, c) => sum + c.votes, 0) >= election.voteLimit;
+  const isElectionClosed = election?.endTime && new Date(election.endTime) < new Date();
+  const isVotingDisabled = hasReachedVoteLimit || isElectionClosed;
+  
   // Check if user is authenticated
   useEffect(() => {
     if (!isAuthenticated) {
@@ -56,6 +62,12 @@ const Voting = () => {
     setShowBiometricModal(false);
     setVotingStep("confirm");
     toast.success("Biometric verification successful!");
+  };
+
+  const handleBiometricFailure = () => {
+    setShowBiometricModal(false);
+    setVerificationFailed(true);
+    toast.error("Biometric verification failed. You are not authorized to vote.");
   };
 
   const handleVoteSelection = (candidateId: string) => {
@@ -91,39 +103,94 @@ const Voting = () => {
     <Layout>
       <div className="container mx-auto px-4 py-12">
         <div className="max-w-4xl mx-auto">
-          <div className="flex justify-between items-center mb-8">
-            <h1 className="text-3xl font-bold text-vote-dark">
-              {election ? election.title : "Election Ballot"}
-            </h1>
-            
-            <div className="flex items-center space-x-2 bg-vote-light px-3 py-1 rounded-full text-sm">
-              <Shield className="h-4 w-4 text-vote-primary" />
-              <span>Secured by Blockchain</span>
+          <div className="flex items-center mb-6">
+            <div className="h-10 w-10 rounded-full bg-gradient-to-r from-vote-primary to-vote-secondary flex items-center justify-center mr-3">
+              <Vote className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold text-vote-dark">
+                {election ? election.title : "Election Ballot"}
+              </h1>
+              {election?.description && (
+                <p className="text-gray-600">{election.description}</p>
+              )}
             </div>
           </div>
           
+          {isVotingDisabled && (
+            <Alert variant="destructive" className="mb-6">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Voting is closed</AlertTitle>
+              <AlertDescription>
+                {hasReachedVoteLimit 
+                  ? "This election has reached its maximum number of votes."
+                  : "The voting period for this election has ended."
+                }
+              </AlertDescription>
+            </Alert>
+          )}
+          
+          {election?.voteLimit || election?.endTime ? (
+            <div className="flex flex-col md:flex-row items-start md:items-center md:justify-between mb-8 p-4 rounded-lg bg-vote-light border border-vote-accent">
+              {election.voteLimit && (
+                <div className="flex items-center mb-2 md:mb-0">
+                  <Vote className="h-5 w-5 text-vote-primary mr-2" />
+                  <span className="text-sm text-gray-700">
+                    Vote Limit: {election.candidates.reduce((sum, c) => sum + c.votes, 0)} / {election.voteLimit}
+                  </span>
+                </div>
+              )}
+              
+              {election.endTime && (
+                <div className="flex items-center">
+                  <Clock className="h-5 w-5 text-vote-primary mr-2" />
+                  <span className="text-sm text-gray-700">
+                    Closes: {new Date(election.endTime).toLocaleString()}
+                  </span>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="flex items-center mb-8 p-4 rounded-lg bg-vote-light border border-vote-accent">
+              <Shield className="h-5 w-5 text-vote-primary mr-2" />
+              <span className="text-sm text-gray-700">Secured by Blockchain Technology</span>
+            </div>
+          )}
+          
           {/* Progress Steps */}
-          <div className="flex items-center justify-between mb-8 px-4">
+          <div className="flex items-center justify-between mb-8 px-4 bg-white p-4 rounded-xl shadow-sm">
             <div className="flex flex-col items-center">
-              <div className={`h-8 w-8 rounded-full flex items-center justify-center ${votingStep === "select" ? "bg-vote-primary text-white" : "bg-vote-primary text-white"}`}>
+              <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
+                votingStep === "select" 
+                  ? "bg-gradient-to-r from-vote-primary to-vote-secondary text-white" 
+                  : "bg-vote-primary text-white"
+              }`}>
                 1
               </div>
               <span className="text-xs mt-1">Select</span>
             </div>
             
-            <div className={`h-1 flex-grow ${votingStep === "select" ? "bg-gray-200" : "bg-vote-primary"}`} />
+            <div className={`h-1 flex-grow mx-4 ${votingStep === "select" ? "bg-gray-200" : "bg-vote-primary"}`} />
             
             <div className="flex flex-col items-center">
-              <div className={`h-8 w-8 rounded-full flex items-center justify-center ${votingStep === "verify" || votingStep === "confirm" ? "bg-vote-primary text-white" : "bg-gray-200 text-gray-500"}`}>
+              <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
+                votingStep === "verify" || votingStep === "confirm" 
+                  ? "bg-gradient-to-r from-vote-primary to-vote-secondary text-white" 
+                  : "bg-gray-200 text-gray-500"
+              }`}>
                 2
               </div>
               <span className="text-xs mt-1">Verify</span>
             </div>
             
-            <div className={`h-1 flex-grow ${votingStep === "confirm" ? "bg-vote-primary" : "bg-gray-200"}`} />
+            <div className={`h-1 flex-grow mx-4 ${votingStep === "confirm" ? "bg-vote-primary" : "bg-gray-200"}`} />
             
             <div className="flex flex-col items-center">
-              <div className={`h-8 w-8 rounded-full flex items-center justify-center ${votingStep === "confirm" ? "bg-vote-primary text-white" : "bg-gray-200 text-gray-500"}`}>
+              <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
+                votingStep === "confirm" 
+                  ? "bg-gradient-to-r from-vote-primary to-vote-secondary text-white" 
+                  : "bg-gray-200 text-gray-500"
+              }`}>
                 3
               </div>
               <span className="text-xs mt-1">Submit</span>
@@ -133,15 +200,15 @@ const Voting = () => {
           {/* Voting Interface */}
           {votingStep === "select" && (
             <div>
-              <Card>
-                <CardHeader>
+              <Card className="border-0 shadow-lg overflow-hidden bg-gradient-to-br from-white to-vote-light">
+                <CardHeader className="bg-white border-b">
                   <CardTitle>Select Your Preferred Candidate</CardTitle>
                   <CardDescription>
                     Choose one candidate for the position of {election?.position || "Student Body President"}
                   </CardDescription>
                 </CardHeader>
                 
-                <CardContent>
+                <CardContent className="p-6">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {(election?.candidates || [])
                       .map((candidate) => (
@@ -161,32 +228,100 @@ const Voting = () => {
                   <div className="mt-8 text-center">
                     <Button
                       onClick={handleProceedToVerification}
-                      disabled={!selectedCandidate}
-                      className="bg-vote-primary hover:bg-vote-secondary text-white"
+                      disabled={!selectedCandidate || isVotingDisabled}
+                      className="bg-gradient-to-r from-vote-primary to-vote-secondary hover:opacity-90 text-white transition-opacity duration-300 shadow-md"
                       size="lg"
                     >
                       <Vote className="mr-2 h-5 w-5" />
-                      Proceed to Verification
+                      {isVotingDisabled
+                        ? "Voting Closed"
+                        : "Proceed to Verification"
+                      }
                     </Button>
+                    
+                    {isVotingDisabled && (
+                      <p className="mt-3 text-sm text-gray-500">
+                        {hasReachedVoteLimit 
+                          ? "This election has reached its maximum number of votes."
+                          : "The voting period for this election has ended."
+                        }
+                      </p>
+                    )}
                   </div>
                 </CardContent>
               </Card>
             </div>
           )}
           
-          {votingStep === "verify" && !showBiometricModal && (
-            <Card>
-              <CardHeader>
+          {votingStep === "verify" && verificationFailed && (
+            <Card className="border-0 shadow-lg overflow-hidden bg-gradient-to-br from-white to-vote-light">
+              <CardHeader className="bg-white border-b">
+                <div className="flex items-center">
+                  <AlertCircle className="h-5 w-5 text-destructive mr-2" />
+                  <div>
+                    <CardTitle>Verification Failed</CardTitle>
+                    <CardDescription>
+                      Your biometric verification could not be confirmed
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              
+              <CardContent className="p-8 text-center">
+                <div className="mx-auto h-20 w-20 rounded-full bg-red-100 flex items-center justify-center mb-6">
+                  <AlertCircle className="h-10 w-10 text-red-500" />
+                </div>
+                
+                <h3 className="text-xl font-medium mb-3 text-gray-800">Unauthorized Access</h3>
+                <p className="text-gray-600 mb-8">
+                  Your fingerprint could not be verified. Only registered users with confirmed biometric data can vote in this election.
+                </p>
+                
+                <div className="flex flex-col sm:flex-row justify-center gap-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setVerificationFailed(false);
+                      setVotingStep("select");
+                    }}
+                    className="border-vote-primary text-vote-primary hover:bg-vote-primary hover:text-white"
+                  >
+                    Return to Ballot
+                  </Button>
+                  
+                  <Button
+                    onClick={() => navigate("/")}
+                    className="bg-vote-primary hover:bg-vote-secondary text-white"
+                  >
+                    Go to Home Page
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          
+          {votingStep === "verify" && !verificationFailed && !showBiometricModal && (
+            <Card className="border-0 shadow-lg overflow-hidden bg-gradient-to-br from-white to-vote-light">
+              <CardHeader className="bg-white border-b">
                 <CardTitle>Biometric Verification Required</CardTitle>
                 <CardDescription>
                   Please complete the biometric verification process
                 </CardDescription>
               </CardHeader>
               
-              <CardContent className="text-center py-12">
+              <CardContent className="p-10 text-center">
+                <div className="mx-auto h-24 w-24 rounded-full bg-vote-light flex items-center justify-center mb-6">
+                  <Fingerprint className="h-12 w-12 text-vote-primary" />
+                </div>
+                
+                <p className="text-gray-600 mb-6">
+                  For security purposes, please verify your identity using your fingerprint.
+                  This ensures that each person can only vote once.
+                </p>
+                
                 <Button
                   onClick={() => setShowBiometricModal(true)}
-                  className="bg-vote-primary hover:bg-vote-secondary text-white"
+                  className="bg-gradient-to-r from-vote-primary to-vote-secondary hover:opacity-90 text-white shadow-md"
                   size="lg"
                 >
                   Start Biometric Verification
@@ -196,15 +331,15 @@ const Voting = () => {
           )}
           
           {votingStep === "confirm" && (
-            <Card>
-              <CardHeader>
+            <Card className="border-0 shadow-lg overflow-hidden bg-gradient-to-br from-white to-vote-light">
+              <CardHeader className="bg-white border-b">
                 <CardTitle>Confirm Your Vote</CardTitle>
                 <CardDescription>
                   Please review your selection before submitting your vote
                 </CardDescription>
               </CardHeader>
               
-              <CardContent>
+              <CardContent className="p-6">
                 <div className="mb-6">
                   <Alert className="bg-vote-light border-vote-primary">
                     <AlertTitle className="text-vote-primary">Your vote is about to be recorded on the blockchain</AlertTitle>
@@ -235,7 +370,7 @@ const Voting = () => {
                   <Button
                     onClick={handleCastVote}
                     disabled={isLoading}
-                    className="bg-vote-primary hover:bg-vote-secondary text-white"
+                    className="bg-gradient-to-r from-vote-primary to-vote-secondary hover:opacity-90 text-white"
                   >
                     {isLoading ? "Recording Vote..." : "Confirm and Cast Vote"}
                   </Button>
@@ -253,6 +388,7 @@ const Voting = () => {
             <BiometricVerification
               onVerified={handleBiometricSuccess}
               onCancel={() => setShowBiometricModal(false)}
+              userId={currentUser?.id}
             />
           </div>
         </div>

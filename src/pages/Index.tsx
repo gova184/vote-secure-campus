@@ -2,23 +2,35 @@
 import { useNavigate } from "react-router-dom";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
-import { Shield, Vote, Fingerprint, Lock } from "lucide-react";
+import { Shield, Vote, Fingerprint, Lock, CheckCircle2, ClipboardList } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { useBlockchain } from "@/context/BlockchainContext";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import ResultsChart from "@/components/ResultsChart";
 
 const Index = () => {
   const navigate = useNavigate();
   const { isAuthenticated, currentUser } = useAuth();
+  const { getAllElections, getResults } = useBlockchain();
+
+  const recentElections = getAllElections?.() || [];
+  const hasActiveElections = recentElections.length > 0;
+  const featuredElection = hasActiveElections ? recentElections[0] : null;
+  const featuredResults = featuredElection ? getResults(featuredElection.id) : [];
 
   return (
     <Layout>
       {/* Hero Section */}
-      <section className="py-16 md:py-24 bg-gradient-to-br from-vote-light to-white">
+      <section className="pt-16 md:pt-24 pb-12 bg-gradient-to-br from-vote-light via-white to-vote-light">
         <div className="container mx-auto px-4 text-center">
+          <div className="mb-6 mx-auto h-16 w-16 rounded-full bg-gradient-to-br from-vote-primary to-vote-secondary flex items-center justify-center">
+            <CheckCircle2 className="h-8 w-8 text-white" />
+          </div>
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 bg-gradient-to-r from-vote-primary to-vote-secondary bg-clip-text text-transparent">
             Secure. Transparent. Verifiable.
           </h1>
           <p className="text-lg md:text-xl text-gray-700 max-w-3xl mx-auto mb-12">
-            Welcome to VoteSecure Campus, the secure digital voting platform for your college elections.
+            Welcome to VoteGuard, the secure digital voting platform for your college elections.
             Powered by blockchain technology and biometric authentication.
           </p>
           
@@ -29,7 +41,7 @@ const Index = () => {
                   <Button 
                     size="lg" 
                     onClick={() => navigate("/voting")}
-                    className="bg-vote-primary hover:bg-vote-secondary text-white"
+                    className="bg-gradient-to-r from-vote-primary to-vote-secondary hover:opacity-90 text-white transition-opacity duration-300 shadow-lg"
                   >
                     <Vote className="mr-2 h-5 w-5" />
                     Cast Your Vote
@@ -38,7 +50,7 @@ const Index = () => {
                   <Button 
                     size="lg" 
                     onClick={() => navigate("/results")}
-                    className="bg-vote-primary hover:bg-vote-secondary text-white"
+                    className="bg-gradient-to-r from-vote-primary to-vote-secondary hover:opacity-90 text-white transition-opacity duration-300 shadow-lg"
                   >
                     View Election Results
                   </Button>
@@ -49,7 +61,7 @@ const Index = () => {
                 <Button 
                   size="lg" 
                   onClick={() => navigate("/register")}
-                  className="bg-vote-primary hover:bg-vote-secondary text-white"
+                  className="bg-gradient-to-r from-vote-primary to-vote-secondary hover:opacity-90 text-white transition-opacity duration-300 shadow-lg"
                 >
                   Register Now
                 </Button>
@@ -57,7 +69,7 @@ const Index = () => {
                   size="lg" 
                   variant="outline" 
                   onClick={() => navigate("/login")}
-                  className="border-vote-primary text-vote-primary hover:bg-vote-primary hover:text-white"
+                  className="border-vote-primary text-vote-primary hover:bg-vote-primary hover:text-white transition-colors duration-300"
                 >
                   Login
                 </Button>
@@ -71,50 +83,120 @@ const Index = () => {
                 size="lg" 
                 variant="outline" 
                 onClick={() => navigate("/create-vote")}
-                className="border-vote-primary text-vote-primary hover:bg-vote-primary hover:text-white"
+                className="border-vote-primary text-vote-primary hover:bg-vote-primary hover:text-white transition-colors duration-300"
               >
+                <ClipboardList className="mr-2 h-5 w-5" />
                 Create Your Own Election
               </Button>
             </div>
           )}
+        </div>
+      </section>
+
+      {/* Live Results Section */}
+      <section className="py-12 bg-white">
+        <div className="container mx-auto px-4">
+          <h2 className="text-3xl font-bold mb-8 text-center">
+            {hasActiveElections ? "Live Election Results" : "No Active Elections"}
+          </h2>
           
-          <div className="relative w-full max-w-4xl mx-auto">
-            <div className="bg-white rounded-xl shadow-xl overflow-hidden border border-gray-100">
-              <img 
-                src="/placeholder.svg" 
-                alt="Voting Platform Interface"
-                className="w-full h-auto"
-              />
-              <div className="absolute inset-0 bg-vote-primary bg-opacity-10 flex items-center justify-center">
-                <div className="bg-white bg-opacity-90 p-6 rounded-lg max-w-md text-center">
-                  <h3 className="text-xl font-bold text-vote-primary mb-2">
-                    Demo Version
-                  </h3>
-                  <p className="text-gray-700">
-                    You can explore the app using these demo accounts:
-                  </p>
-                  <div className="mt-3 text-left text-sm space-y-1">
-                    <p><strong>Admin:</strong> admin@university.edu</p>
-                    <p><strong>Student:</strong> student@university.edu</p>
-                    <p><strong>Password:</strong> (any password will work)</p>
+          {hasActiveElections ? (
+            <div className="max-w-5xl mx-auto">
+              <Card className="border-0 shadow-lg overflow-hidden bg-gradient-to-br from-white to-vote-light mb-8">
+                <CardHeader className="bg-white border-b">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-xl text-vote-primary">{featuredElection.title}</CardTitle>
+                      <CardDescription>{featuredElection.description}</CardDescription>
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => navigate(`/results/${featuredElection.id}`)}
+                      className="border-vote-primary text-vote-primary hover:bg-vote-primary hover:text-white"
+                    >
+                      View Details
+                    </Button>
                   </div>
-                </div>
-              </div>
+                </CardHeader>
+                <CardContent className="p-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div>
+                      <ResultsChart candidates={featuredResults} />
+                    </div>
+                    <div className="space-y-4">
+                      {featuredResults.slice(0, 3).map((candidate, index) => (
+                        <div key={candidate.id} className="flex items-center bg-white p-4 rounded-lg shadow">
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center mr-4 ${
+                            index === 0 ? "bg-gradient-to-r from-yellow-400 to-yellow-200 text-yellow-800" :
+                            index === 1 ? "bg-gradient-to-r from-gray-400 to-gray-200 text-gray-800" :
+                            "bg-gradient-to-r from-amber-600 to-amber-300 text-amber-800"
+                          }`}>
+                            {index + 1}
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="font-medium">{candidate.name}</h3>
+                            <div className="text-sm text-gray-500">{candidate.party}</div>
+                          </div>
+                          <div className="font-bold text-vote-primary">{candidate.votes} votes</div>
+                        </div>
+                      ))}
+                      
+                      {recentElections.length > 1 && (
+                        <div className="mt-6 text-center">
+                          <h3 className="text-lg font-medium mb-4">Other Active Elections</h3>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            {recentElections.slice(1, 5).map(election => (
+                              <Button 
+                                key={election.id} 
+                                variant="outline" 
+                                onClick={() => navigate(`/results/${election.id}`)}
+                                className="text-left justify-start border-vote-light hover:border-vote-primary"
+                              >
+                                <div className="truncate">
+                                  <div className="font-medium truncate">{election.title}</div>
+                                  <div className="text-xs text-gray-500 truncate">{election.candidates.length} candidates</div>
+                                </div>
+                              </Button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
-          </div>
+          ) : (
+            <div className="max-w-2xl mx-auto text-center bg-vote-light p-8 rounded-xl shadow-sm">
+              <div className="text-6xl text-vote-primary mb-4">📊</div>
+              <h3 className="text-xl font-medium mb-2">No active elections at the moment</h3>
+              <p className="text-gray-600 mb-6">
+                When elections are created, they will appear here with live results and statistics.
+              </p>
+              {isAuthenticated && (
+                <Button 
+                  onClick={() => navigate("/create-vote")} 
+                  className="bg-gradient-to-r from-vote-primary to-vote-secondary hover:opacity-90 text-white"
+                >
+                  <ClipboardList className="mr-2 h-4 w-4" />
+                  Create an Election
+                </Button>
+              )}
+            </div>
+          )}
         </div>
       </section>
 
       {/* Features Section */}
-      <section className="py-16 bg-vote-light">
+      <section className="py-16 bg-gradient-to-br from-vote-light to-white">
         <div className="container mx-auto px-4">
           <h2 className="text-3xl md:text-4xl font-bold mb-12 text-center">
             How It Works
           </h2>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="bg-white p-6 rounded-lg shadow-md text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-vote-primary bg-opacity-10 mb-6">
+            <div className="bg-white p-8 rounded-xl shadow-md text-center transform transition-transform hover:scale-105">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-vote-primary to-vote-secondary bg-opacity-10 mb-6">
                 <Fingerprint className="h-8 w-8 text-vote-primary" />
               </div>
               <h3 className="text-xl font-bold mb-3 text-vote-dark">Biometric Verification</h3>
@@ -123,8 +205,8 @@ const Index = () => {
               </p>
             </div>
             
-            <div className="bg-white p-6 rounded-lg shadow-md text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-vote-primary bg-opacity-10 mb-6">
+            <div className="bg-white p-8 rounded-xl shadow-md text-center transform transition-transform hover:scale-105">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-vote-primary to-vote-secondary bg-opacity-10 mb-6">
                 <Lock className="h-8 w-8 text-vote-primary" />
               </div>
               <h3 className="text-xl font-bold mb-3 text-vote-dark">Blockchain Powered</h3>
@@ -133,8 +215,8 @@ const Index = () => {
               </p>
             </div>
             
-            <div className="bg-white p-6 rounded-lg shadow-md text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-vote-primary bg-opacity-10 mb-6">
+            <div className="bg-white p-8 rounded-xl shadow-md text-center transform transition-transform hover:scale-105">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-vote-primary to-vote-secondary bg-opacity-10 mb-6">
                 <Shield className="h-8 w-8 text-vote-primary" />
               </div>
               <h3 className="text-xl font-bold mb-3 text-vote-dark">Total Transparency</h3>
@@ -147,7 +229,7 @@ const Index = () => {
       </section>
 
       {/* CTA Section */}
-      <section className="py-16 bg-vote-dark text-white">
+      <section className="py-16 bg-gradient-to-r from-vote-dark to-[#2D2351] text-white">
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-3xl md:text-4xl font-bold mb-6">
             Ready to Transform Campus Elections?
@@ -159,7 +241,7 @@ const Index = () => {
             <Button 
               size="lg" 
               onClick={() => navigate(isAuthenticated ? "/voting" : "/register")}
-              className="bg-vote-primary hover:bg-vote-secondary text-white"
+              className="bg-white text-vote-primary hover:bg-vote-light transition-colors"
             >
               {isAuthenticated ? "Go to Voting" : "Get Started Now"}
             </Button>

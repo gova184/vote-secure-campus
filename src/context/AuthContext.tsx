@@ -10,6 +10,7 @@ interface User {
   isAdmin: boolean;
   hasVoted: boolean;
   biometricVerified: boolean;
+  fingerprintData?: string; // Store fingerprint data
 }
 
 interface AuthContextType {
@@ -18,9 +19,11 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
-  register: (userData: Omit<User, 'id' | 'isAdmin' | 'hasVoted' | 'biometricVerified'> & { password: string }) => Promise<boolean>;
+  register: (userData: Omit<User, 'id' | 'isAdmin' | 'hasVoted' | 'biometricVerified' | 'fingerprintData'> & { password: string }) => Promise<boolean>;
   verifyBiometric: () => Promise<boolean>;
   setHasVoted: () => void;
+  storeFingerprint: (fingerprintData: string) => Promise<boolean>;
+  verifyFingerprint: (userId: string, fingerprintData: string) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -34,7 +37,8 @@ const mockUsers: User[] = [
     studentId: 'A12345',
     isAdmin: true,
     hasVoted: false,
-    biometricVerified: true
+    biometricVerified: true,
+    fingerprintData: 'mock-fingerprint-data-admin'
   },
   {
     id: '2',
@@ -43,9 +47,13 @@ const mockUsers: User[] = [
     studentId: 'S67890',
     isAdmin: false,
     hasVoted: false,
-    biometricVerified: false
+    biometricVerified: false,
+    fingerprintData: 'mock-fingerprint-data-student'
   }
 ];
+
+// For demo purposes, store users in memory
+let registeredUsers = [...mockUsers];
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -66,7 +74,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Simulate API call
     return new Promise((resolve) => {
       setTimeout(() => {
-        const user = mockUsers.find(user => user.email.toLowerCase() === email.toLowerCase());
+        const user = registeredUsers.find(user => user.email.toLowerCase() === email.toLowerCase());
         
         if (user) {
           setCurrentUser(user);
@@ -89,13 +97,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     toast.success('Logged out successfully');
   };
 
-  const register = async (userData: Omit<User, 'id' | 'isAdmin' | 'hasVoted' | 'biometricVerified'> & { password: string }): Promise<boolean> => {
+  const register = async (userData: Omit<User, 'id' | 'isAdmin' | 'hasVoted' | 'biometricVerified' | 'fingerprintData'> & { password: string }): Promise<boolean> => {
     setIsLoading(true);
     
     // Simulate API call
     return new Promise((resolve) => {
       setTimeout(() => {
-        const existingUser = mockUsers.find(user => user.email.toLowerCase() === userData.email.toLowerCase());
+        const existingUser = registeredUsers.find(user => user.email.toLowerCase() === userData.email.toLowerCase());
         
         if (existingUser) {
           toast.error('Email already registered');
@@ -105,15 +113,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
         
         const newUser: User = {
-          id: `${mockUsers.length + 1}`,
+          id: `${registeredUsers.length + 1}`,
           ...userData,
           isAdmin: false,
           hasVoted: false,
-          biometricVerified: false
+          biometricVerified: true, // We set this to true because we've just registered biometrically
         };
         
         // In a real app, we would send this to a backend
         // For demo purposes, we'll just set it locally
+        registeredUsers.push(newUser);
         setCurrentUser(newUser);
         localStorage.setItem('currentUser', JSON.stringify(newUser));
         toast.success('Registration successful!');
@@ -130,6 +139,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const updatedUser = { ...currentUser, biometricVerified: true };
           setCurrentUser(updatedUser);
           localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+          
+          // Update in the registered users array
+          registeredUsers = registeredUsers.map(user => 
+            user.id === currentUser.id ? updatedUser : user
+          );
+          
           toast.success('Biometric verification successful!');
           resolve(true);
         } else {
@@ -140,11 +155,61 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   };
 
+  const storeFingerprint = async (fingerprintData: string): Promise<boolean> => {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        if (currentUser) {
+          const updatedUser = { 
+            ...currentUser, 
+            biometricVerified: true,
+            fingerprintData
+          };
+          
+          setCurrentUser(updatedUser);
+          localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+          
+          // Update in the registered users array
+          registeredUsers = registeredUsers.map(user => 
+            user.id === currentUser.id ? updatedUser : user
+          );
+          
+          toast.success('Fingerprint registered successfully!');
+          resolve(true);
+        } else {
+          toast.error('User not found');
+          resolve(false);
+        }
+      }, 1500);
+    });
+  };
+
+  const verifyFingerprint = async (userId: string, fingerprintData: string): Promise<boolean> => {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        // Find user in the registered users array
+        const user = registeredUsers.find(u => u.id === userId);
+        
+        if (user && user.fingerprintData) {
+          // In a real app, we would do a proper comparison of fingerprint data
+          // For demo purposes, we'll simulate verification after several attempts
+          resolve(Math.random() > 0.3); // 70% success rate for demo
+        } else {
+          resolve(false);
+        }
+      }, 1500);
+    });
+  };
+
   const setHasVoted = () => {
     if (currentUser) {
       const updatedUser = { ...currentUser, hasVoted: true };
       setCurrentUser(updatedUser);
       localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+      
+      // Update in the registered users array
+      registeredUsers = registeredUsers.map(user => 
+        user.id === currentUser.id ? updatedUser : user
+      );
     }
   };
 
@@ -158,7 +223,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         logout,
         register,
         verifyBiometric,
-        setHasVoted
+        setHasVoted,
+        storeFingerprint,
+        verifyFingerprint
       }}
     >
       {children}
