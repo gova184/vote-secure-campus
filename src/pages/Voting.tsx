@@ -5,7 +5,7 @@ import Layout from "@/components/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Shield, Vote, Clock, AlertCircle } from "lucide-react";
+import { Shield, Vote, Clock, AlertCircle, Fingerprint } from "lucide-react";
 import CandidateCard from "@/components/CandidateCard";
 import BiometricVerification from "@/components/BiometricVerification";
 import { useAuth } from "@/context/AuthContext";

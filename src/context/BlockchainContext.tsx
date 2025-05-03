@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { toast } from 'sonner';
 
@@ -19,6 +18,8 @@ interface Election {
   createdBy: string;
   createdAt: number;
   candidates: Candidate[];
+  voteLimit?: number;
+  endTime?: string;
 }
 
 interface Block {
@@ -37,6 +38,8 @@ interface ElectionInput {
   position: string;
   createdBy: string;
   candidates: Omit<Candidate, 'id' | 'votes'>[];
+  voteLimit?: number;
+  endTime?: string;
 }
 
 interface BlockchainContextType {
@@ -51,6 +54,7 @@ interface BlockchainContextType {
   getElection: (electionId: string) => Election | undefined;
   getCurrentElection: () => Election | undefined;
   setCurrentElection: (electionId: string) => void;
+  getAllElections: () => Election[];
 }
 
 const BlockchainContext = createContext<BlockchainContextType | undefined>(undefined);
@@ -169,6 +173,10 @@ export const BlockchainProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     localStorage.setItem('currentElection', currentElectionId);
   }, [currentElectionId]);
 
+  const getAllElections = (): Election[] => {
+    return [...elections];
+  };
+
   const getCurrentElection = (): Election | undefined => {
     return elections.find(e => e.id === currentElectionId);
   };
@@ -212,7 +220,9 @@ export const BlockchainProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             position: electionInput.position,
             createdBy: electionInput.createdBy,
             createdAt: Date.now(),
-            candidates: electionCandidates
+            candidates: electionCandidates,
+            voteLimit: electionInput.voteLimit,
+            endTime: electionInput.endTime
           };
           
           setElections(prev => [...prev, newElection]);
@@ -385,7 +395,8 @@ export const BlockchainProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         createElection,
         getElection,
         getCurrentElection,
-        setCurrentElection
+        setCurrentElection,
+        getAllElections
       }}
     >
       {children}
