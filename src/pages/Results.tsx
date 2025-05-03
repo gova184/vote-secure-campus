@@ -54,7 +54,7 @@ const Results = () => {
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <ResultsChart results={results} />
+                    <ResultsChart candidates={results} />
                   </CardContent>
                 </Card>
                 
