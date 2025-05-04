@@ -21,6 +21,7 @@ interface AuthContextType {
   logout: () => void;
   register: (userData: Omit<User, 'id' | 'isAdmin' | 'hasVoted' | 'biometricVerified' | 'fingerprintData'> & { password: string }) => Promise<boolean>;
   verifyBiometric: () => Promise<boolean>;
+  verifyStudentId: (id: string) => Promise<boolean>;
   setHasVoted: () => void;
   storeFingerprint: (fingerprintData: string) => Promise<boolean>;
   verifyFingerprint: (userId: string, fingerprintData: string) => Promise<boolean>;
@@ -155,6 +156,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   };
 
+  const verifyStudentId = async (studentId: string): Promise<boolean> => {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        if (currentUser) {
+          // For demo purposes, accept if it matches the stored ID or with some probability
+          const isValid = currentUser.studentId === studentId || Math.random() > 0.3;
+          
+          if (isValid) {
+            toast.success('Student ID verified successfully!');
+            resolve(true);
+          } else {
+            toast.error('Invalid Student ID');
+            resolve(false);
+          }
+        } else {
+          toast.error('User not found');
+          resolve(false);
+        }
+      }, 1500);
+    });
+  };
+
   const storeFingerprint = async (fingerprintData: string): Promise<boolean> => {
     return new Promise((resolve) => {
       setTimeout(() => {
@@ -223,6 +246,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         logout,
         register,
         verifyBiometric,
+        verifyStudentId,
         setHasVoted,
         storeFingerprint,
         verifyFingerprint

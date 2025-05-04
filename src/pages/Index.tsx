@@ -1,4 +1,3 @@
-
 import { useNavigate } from "react-router-dom";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
@@ -13,10 +12,12 @@ const Index = () => {
   const { isAuthenticated, currentUser } = useAuth();
   const { getAllElections, getResults } = useBlockchain();
 
-  const recentElections = getAllElections?.() || [];
-  const hasActiveElections = recentElections.length > 0;
-  const featuredElection = hasActiveElections ? recentElections[0] : null;
-  const featuredResults = featuredElection ? getResults(featuredElection.id) : [];
+  // Empty elections by default for development
+  const recentElections = [];
+  const hasActiveElections = false;
+  // We're not showing any featured election during development
+  const featuredElection = null;
+  const featuredResults = [];
 
   return (
     <Layout>
@@ -100,90 +101,23 @@ const Index = () => {
             {hasActiveElections ? "Live Election Results" : "No Active Elections"}
           </h2>
           
-          {hasActiveElections ? (
-            <div className="max-w-5xl mx-auto">
-              <Card className="border-0 shadow-lg overflow-hidden bg-gradient-to-br from-white to-vote-light mb-8">
-                <CardHeader className="bg-white border-b">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="text-xl text-vote-primary">{featuredElection.title}</CardTitle>
-                      <CardDescription>{featuredElection.description}</CardDescription>
-                    </div>
-                    <Button 
-                      variant="outline" 
-                      onClick={() => navigate(`/results/${featuredElection.id}`)}
-                      className="border-vote-primary text-vote-primary hover:bg-vote-primary hover:text-white"
-                    >
-                      View Details
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div>
-                      <ResultsChart candidates={featuredResults} />
-                    </div>
-                    <div className="space-y-4">
-                      {featuredResults.slice(0, 3).map((candidate, index) => (
-                        <div key={candidate.id} className="flex items-center bg-white p-4 rounded-lg shadow">
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center mr-4 ${
-                            index === 0 ? "bg-gradient-to-r from-yellow-400 to-yellow-200 text-yellow-800" :
-                            index === 1 ? "bg-gradient-to-r from-gray-400 to-gray-200 text-gray-800" :
-                            "bg-gradient-to-r from-amber-600 to-amber-300 text-amber-800"
-                          }`}>
-                            {index + 1}
-                          </div>
-                          <div className="flex-1">
-                            <h3 className="font-medium">{candidate.name}</h3>
-                            <div className="text-sm text-gray-500">{candidate.party}</div>
-                          </div>
-                          <div className="font-bold text-vote-primary">{candidate.votes} votes</div>
-                        </div>
-                      ))}
-                      
-                      {recentElections.length > 1 && (
-                        <div className="mt-6 text-center">
-                          <h3 className="text-lg font-medium mb-4">Other Active Elections</h3>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            {recentElections.slice(1, 5).map(election => (
-                              <Button 
-                                key={election.id} 
-                                variant="outline" 
-                                onClick={() => navigate(`/results/${election.id}`)}
-                                className="text-left justify-start border-vote-light hover:border-vote-primary"
-                              >
-                                <div className="truncate">
-                                  <div className="font-medium truncate">{election.title}</div>
-                                  <div className="text-xs text-gray-500 truncate">{election.candidates.length} candidates</div>
-                                </div>
-                              </Button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          ) : (
-            <div className="max-w-2xl mx-auto text-center bg-vote-light p-8 rounded-xl shadow-sm">
-              <div className="text-6xl text-vote-primary mb-4">📊</div>
-              <h3 className="text-xl font-medium mb-2">No active elections at the moment</h3>
-              <p className="text-gray-600 mb-6">
-                When elections are created, they will appear here with live results and statistics.
-              </p>
-              {isAuthenticated && (
-                <Button 
-                  onClick={() => navigate("/create-vote")} 
-                  className="bg-gradient-to-r from-vote-primary to-vote-secondary hover:opacity-90 text-white"
-                >
-                  <ClipboardList className="mr-2 h-4 w-4" />
-                  Create an Election
-                </Button>
-              )}
-            </div>
-          )}
+          {/* Always show "No Active Elections" during development */}
+          <div className="max-w-2xl mx-auto text-center bg-vote-light p-8 rounded-xl shadow-sm">
+            <div className="text-6xl text-vote-primary mb-4">📊</div>
+            <h3 className="text-xl font-medium mb-2">No active elections at the moment</h3>
+            <p className="text-gray-600 mb-6">
+              When elections are created, they will appear here with live results and statistics.
+            </p>
+            {isAuthenticated && (
+              <Button 
+                onClick={() => navigate("/create-vote")} 
+                className="bg-gradient-to-r from-vote-primary to-vote-secondary hover:opacity-90 text-white"
+              >
+                <ClipboardList className="mr-2 h-4 w-4" />
+                Create an Election
+              </Button>
+            )}
+          </div>
         </div>
       </section>
 
