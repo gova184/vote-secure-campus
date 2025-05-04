@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -89,7 +88,7 @@ const BiometricVerification = ({ onVerified, onCancel, userId }: BiometricVerifi
     const userId = crypto.randomUUID();
     
     // Create the credential options
-    const publicKeyCredentialCreationOptions = {
+    const publicKeyCredentialCreationOptions: PublicKeyCredentialCreationOptions = {
       challenge,
       rp: {
         name: "VoteGuard",
@@ -101,12 +100,12 @@ const BiometricVerification = ({ onVerified, onCancel, userId }: BiometricVerifi
         displayName: "VoteGuard User"
       },
       pubKeyCredParams: [
-        { type: "public-key", alg: -7 }, // ES256
-        { type: "public-key", alg: -257 } // RS256
+        { type: "public-key" as const, alg: -7 }, // ES256
+        { type: "public-key" as const, alg: -257 } // RS256
       ],
       authenticatorSelection: {
-        authenticatorAttachment: "platform" as AuthenticatorAttachment,
-        userVerification: "required" as UserVerificationRequirement
+        authenticatorAttachment: "platform",
+        userVerification: "required"
       },
       timeout: 60000
     };
